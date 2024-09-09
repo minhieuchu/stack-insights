@@ -1,0 +1,27 @@
+version: "2.4"
+volumes:
+  postgres-data-volume:
+
+services:
+  postgres:
+    image: postgres:16.2
+    restart: unless-stopped
+    tty: true
+    stdin_open: true
+    environment:
+      POSTGRES_PASSWORD: LuiCsf5LUikmnI7TGR
+      POSTGRES_DB: stack_insight_postgres
+      PGUSER: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      service.name: "postgres"
+    expose:
+      - "5432"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data-volume:/var/lib/postgresql/data
