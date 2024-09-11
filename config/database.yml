@@ -11,14 +11,14 @@ default: &default
 
 development:
   <<: *default
-  database: stack_insight_development
+  database: stack_insights_development
 
 test:
   <<: *default
-  database: stack_insight_test
+  database: stack_insights_test
 
 production:
   <<: *default
-  database: stack_insight_production
-  username: stack_insight
-  password: <%= ENV["STACK_INSIGHT_DATABASE_PASSWORD"] %>
+  database: stack_insights_production
+  username: stack_insights
+  password: <%= ENV["STACK_INSIGHTS_DATABASE_PASSWORD"] %>
