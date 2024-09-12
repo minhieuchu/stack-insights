@@ -1,0 +1,62 @@
+{
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 1,
+    "analysis": {
+      "analyzer": "standard"
+    }
+  },
+  "mappings": {
+    "properties": {
+      "post_id": {
+        "type": "text",
+        "analyzer": "standard"
+      },
+      "post_type_id": {
+        "type": "text",
+        "analyzer": "standard"
+      },
+      "creation_date": {
+        "type": "date"
+      },
+      "score": {
+        "type": "text",
+        "analyzer": "standard"
+      },
+      "view_count": {
+        "type": "text",
+        "analyzer": "standard"
+      },
+      "body": {
+        "type": "text",
+        "analyzer": "standard"
+      },
+      "owner_user_id": {
+        "type": "text",
+        "analyzer": "standard"
+      },
+      "owner_display_name": {
+        "type": "text",
+        "analyzer": "standard"
+      },
+      "last_edit_date": {
+        "type": "date"
+      },
+      "last_activity_date": {
+        "type": "date"
+      },
+      "title": {
+        "type": "text",
+        "analyzer": "standard"
+      },
+      "tags": {
+        "type": "text",
+        "analyzer": "standard"
+      },
+      "answer_count": {
+        "type": "text",
+        "analyzer": "standard"
+      }
+    }
+  }
+}
