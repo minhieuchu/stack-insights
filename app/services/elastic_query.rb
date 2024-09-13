@@ -1,5 +1,5 @@
-class EsQueryService
+class ElasticQuery
   def self.query(keywords)
-    ElasticClient.search(index: POST_INDEX_NAME, body: { query: { match: { title: keywords } } })
+    ElasticClient.search(index: POST_INDEX, body: { query: { match: { title: keywords } } })
   end
 end
