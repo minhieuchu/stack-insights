@@ -16,11 +16,11 @@ POST_ATTRIBUTES = [
   "OwnerDisplayName",
 ]
 
-ESClient = Elasticsearch::Client.new(
+ElasticClient = Elasticsearch::Client.new(
   url: "http://localhost:9200/",
   log: Rails.env.development?,
 )
 
 Rails.application.config.after_initialize do
-  FileIngestService.create_elasticsearch_indexes
+  ElasticManager.create_elastic_indexes
 end

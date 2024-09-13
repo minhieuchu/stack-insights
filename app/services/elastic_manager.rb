@@ -1,11 +1,11 @@
-class FileIngestService
+class ElasticManager
   extend Utils
 
-  def self.create_elasticsearch_indexes
+  def self.create_elastic_indexes
     posts_settings = JSON.parse(File.read(File.join(File.dirname(__FILE__), "/es_indexes/post.json")))
 
-    unless ESClient.indices.exists?(index: POST_INDEX_NAME)
-      ESClient.indices.create(index: POST_INDEX_NAME, body: posts_settings)
+    unless ElasticClient.indices.exists?(index: POST_INDEX_NAME)
+      ElasticClient.indices.create(index: POST_INDEX_NAME, body: posts_settings)
     end
   end
 
@@ -18,8 +18,12 @@ class FileIngestService
         post_object = POST_ATTRIBUTES.each_with_object({}) do |attr_name, post|
           post[camel_to_snake(attr_name)] = row_element.attr(attr_name)
         end
-        ESClient.index(index: POST_INDEX_NAME, body: post_object.to_json)
+        # ElasticClient.index(index: POST_INDEX_NAME, body: post_object.to_json)
       end
     end
+  end
+
+  def self.delete_elastic_indexes
+    ElasticClient.indices.delete(index: POST_INDEX_NAME)
   end
 end
