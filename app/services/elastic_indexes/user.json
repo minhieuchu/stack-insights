@@ -1,0 +1,59 @@
+{
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 1,
+      "analysis": {
+        "analyzer": "standard"
+      }
+    },
+    "mappings": {
+      "properties": {
+        "id": {
+          "type": "text",
+          "analyzer": "standard"
+        },
+        "reputation": {
+          "type": "text",
+          "analyzer": "standard"
+        },
+        "creation_date": {
+          "type": "date"
+        },
+        "display_name": {
+          "type": "text",
+          "analyzer": "standard"
+        },
+        "website_url": {
+          "type": "text",
+          "analyzer": "standard"
+        },
+        "location": {
+          "type": "text",
+          "analyzer": "standard"
+        },
+        "about_me": {
+          "type": "text",
+          "analyzer": "standard"
+        },
+        "views": {
+          "type": "text",
+          "analyzer": "standard"
+        },
+        "up_votes": {
+          "type": "date"
+        },
+        "down_votes": {
+          "type": "date"
+        },
+        "profile_image_url": {
+          "type": "text",
+          "analyzer": "standard"
+        },
+        "account_id": {
+          "type": "text",
+          "analyzer": "standard"
+        }
+      }
+    }
+  }
+  

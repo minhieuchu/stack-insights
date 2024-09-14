@@ -1,43 +1,61 @@
+require "singleton"
+
+IndexSettings = Struct.new(:index_name, :index_attributes, :mapping_file, :data_file)
+
 class ElasticManager
-  extend Utils
+  include Singleton
+  include Utils
 
-  def self.create_elastic_indexes
-    posts_settings = JSON.parse(File.read(File.join(File.dirname(__FILE__), "/elastic_indexes/post.json")))
-
-    unless ElasticClient.indices.exists?(index: POST_INDEX)
-      ElasticClient.indices.create(index: POST_INDEX, body: posts_settings)
-    end
+  def initialize
+    @index_settings = [
+      IndexSettings.new(POST_INDEX, POST_ATTRIBUTES, "post.json", "Posts.xml"),
+      IndexSettings.new(USER_INDEX, USER_ATTRIBUTES, "user.json", "Users.xml"),
+    ]
   end
 
-  def self.process_xml_files
-    # Process posts
-    ElasticBulkHelper.index = POST_INDEX
-    posts_file_path = File.join(File.dirname(__FILE__), "/Posts.xml")
-    post_bulk = []
-    post_bulk_size = 0
-    File.foreach(posts_file_path) do |line|
-      xml_object = Nokogiri::XML(line)
-      row_element = xml_object.at_xpath("//row")
-      unless row_element.nil?
-        post_object = POST_ATTRIBUTES.each_with_object({}) do |attr_name, post|
-          post[camel_to_snake(attr_name)] = row_element.attr(attr_name)
-        end
-        post_as_json = post_object.to_json
-        if post_bulk_size + post_as_json.bytesize <= BULK_SIZE
-          post_bulk << post_object
-          post_bulk_size += post_as_json.bytesize
-        else
-          ElasticBulkHelper.ingest(post_bulk)
-          post_bulk = [post_object]
-          post_bulk_size = post_as_json.bytesize
-        end
+  def create_indexes
+    @index_settings.each do |index_setting|
+      index_mappings = JSON.parse(File.read(File.join(File.dirname(__FILE__), "/elastic_indexes/#{index_setting.mapping_file}")))
+
+      unless ElasticClient.indices.exists?(index: index_setting.index_name)
+        ElasticClient.indices.create(index: index_setting.index_name, body: index_mappings)
       end
     end
-    ElasticBulkHelper.ingest(post_bulk)
   end
 
-  def self.reset_elastic_indexes
-    ElasticClient.indices.delete(index: POST_INDEX)
-    create_elastic_indexes
+  def process_xml_files
+    @index_settings.each do |index_setting|
+      ElasticBulkHelper.index = index_setting.index_name
+      data_file_path = File.join(File.dirname(__FILE__), "/#{index_setting.data_file}")
+      document_bulk = []
+      document_bulk_size = 0
+
+      File.foreach(data_file_path) do |line|
+        xml_object = Nokogiri::XML(line)
+        row_element = xml_object.at_xpath("//row")
+        unless row_element.nil?
+          document_hash = index_setting.index_attributes.each_with_object({}) do |attr_name, document|
+            document[camel_to_snake(attr_name)] = row_element.attr(attr_name)
+          end
+          document_as_json = document_hash.to_json
+          if document_bulk_size + document_as_json.bytesize <= BULK_SIZE
+            document_bulk << document_hash
+            document_bulk_size += document_as_json.bytesize
+          else
+            ElasticBulkHelper.ingest(document_bulk)
+            document_bulk = [document_hash]
+            document_bulk_size = document_as_json.bytesize
+          end
+        end
+      end
+      ElasticBulkHelper.ingest(document_bulk)
+    end
+  end
+
+  def reset_indexes
+    @index_settings.each do |index_setting|
+      ElasticClient.indices.delete(index: index_setting.index_name)
+    end
+    create_indexes
   end
 end

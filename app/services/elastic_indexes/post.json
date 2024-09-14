@@ -8,7 +8,7 @@
   },
   "mappings": {
     "properties": {
-      "post_id": {
+      "id": {
         "type": "text",
         "analyzer": "standard"
       },
