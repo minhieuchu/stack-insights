@@ -10,12 +10,15 @@ class ElasticManager
     @index_settings = [
       IndexSettings.new(POST_INDEX, POST_ATTRIBUTES, "post.json", "Posts.xml"),
       IndexSettings.new(USER_INDEX, USER_ATTRIBUTES, "user.json", "Users.xml"),
+      IndexSettings.new(COMMENT_INDEX, COMMENT_ATTRIBUTES, "comment.json", "Comments.xml"),
+      IndexSettings.new(BADGE_INDEX, BADGE_ATTRIBUTES, "badge.json", "Badges.xml"),
+      IndexSettings.new(TAG_INDEX, TAG_ATTRIBUTES, "tag.json", "Tags.xml"),
     ]
   end
 
-  def create_indexes
+  def create_indices
     @index_settings.each do |index_setting|
-      index_mappings = JSON.parse(File.read(File.join(File.dirname(__FILE__), "/elastic_indexes/#{index_setting.mapping_file}")))
+      index_mappings = JSON.parse(File.read(File.join(File.dirname(__FILE__), "/elastic_indices/#{index_setting.mapping_file}")))
 
       unless ElasticClient.indices.exists?(index: index_setting.index_name)
         ElasticClient.indices.create(index: index_setting.index_name, body: index_mappings)
@@ -23,10 +26,17 @@ class ElasticManager
     end
   end
 
+  def reset_indices
+    @index_settings.each do |index_setting|
+      ElasticClient.indices.delete(index: index_setting.index_name)
+    end
+    create_indices
+  end
+
   def process_xml_files
     @index_settings.each do |index_setting|
       ElasticBulkHelper.index = index_setting.index_name
-      data_file_path = File.join(File.dirname(__FILE__), "/#{index_setting.data_file}")
+      data_file_path = File.join(File.dirname(__FILE__), "/elastic_documents/#{index_setting.data_file}")
       document_bulk = []
       document_bulk_size = 0
 
@@ -52,10 +62,8 @@ class ElasticManager
     end
   end
 
-  def reset_indexes
-    @index_settings.each do |index_setting|
-      ElasticClient.indices.delete(index: index_setting.index_name)
-    end
-    create_indexes
+  def query(keywords)
+    response = ElasticClient.search(index: POST_INDEX, body: { query: { match: { title: keywords } } })
+    results = response.dig("hits", "hits").map { |document| document.dig("_source") }
   end
 end

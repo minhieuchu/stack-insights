@@ -1,0 +1,42 @@
+{
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 1,
+      "analysis": {
+        "analyzer": "standard"
+      }
+    },
+    "mappings": {
+      "properties": {
+        "id": {
+          "type": "text",
+          "analyzer": "standard"
+        },
+        "tag_name": {
+          "type": "text",
+          "analyzer": "standard"
+        },
+        "count": {
+          "type": "text",
+          "analyzer": "standard"
+        },
+        "excerpt_post_id": {
+          "type": "text",
+          "analyzer": "standard"
+        },
+        "wiki_post_id": {
+          "type": "text",
+          "analyzer": "standard"
+        },
+        "is_moderator_only": {
+          "type": "text",
+          "analyzer": "standard"
+        },
+        "is_required": {
+          "type": "text",
+          "analyzer": "standard"
+        }
+      }
+    }
+  }
+  
