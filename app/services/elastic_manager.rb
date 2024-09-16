@@ -33,6 +33,13 @@ class ElasticManager
     create_indices
   end
 
+  def process_attr_value(attr_value)
+    if ["True", "False"].include?(attr_value)
+      return camel_to_snake(attr_value)
+    end
+    attr_value
+  end
+
   def process_xml_files
     @index_settings.each do |index_setting|
       ElasticBulkHelper.index = index_setting.index_name
@@ -45,7 +52,7 @@ class ElasticManager
         row_element = xml_object.at_xpath("//row")
         unless row_element.nil?
           document_hash = index_setting.index_attributes.each_with_object({}) do |attr_name, document|
-            document[camel_to_snake(attr_name)] = row_element.attr(attr_name)
+            document[camel_to_snake(attr_name)] = process_attr_value(row_element.attr(attr_name))
           end
           document_as_json = document_hash.to_json
           if document_bulk_size + document_as_json.bytesize <= BULK_SIZE
@@ -63,7 +70,25 @@ class ElasticManager
   end
 
   def query(keywords)
-    response = ElasticClient.search(index: POST_INDEX, body: { query: { match: { title: keywords } } })
+    response = ElasticClient.search(
+      index: [POST_INDEX, COMMENT_INDEX, BADGE_INDEX, TAG_INDEX],
+      body: {
+        query: {
+          bool: {
+            should: [
+              { match: { title: keywords } },
+              { match: { body: keywords } },
+              { match: { tags: keywords } },
+              { match: { text: keywords } },
+              { match: { name: keywords } },
+              { match: { class: keywords } },
+              { match: { tag_name: keywords } },
+            ],
+            minimum_should_match: 1,
+          },
+        },
+      },
+    )
     results = response.dig("hits", "hits").map { |document| document.dig("_source") }
   end
 end

@@ -9,31 +9,26 @@
   "mappings": {
     "properties": {
       "id": {
-        "type": "text",
-        "analyzer": "standard"
+        "type": "keyword"
       },
       "post_type_id": {
-        "type": "text",
-        "analyzer": "standard"
+        "type": "keyword"
       },
       "creation_date": {
         "type": "date"
       },
       "score": {
-        "type": "text",
-        "analyzer": "standard"
+        "type": "short"
       },
       "view_count": {
-        "type": "text",
-        "analyzer": "standard"
+        "type": "integer"
       },
       "body": {
         "type": "text",
         "analyzer": "standard"
       },
       "owner_user_id": {
-        "type": "text",
-        "analyzer": "standard"
+        "type": "keyword"
       },
       "owner_display_name": {
         "type": "text",
@@ -54,8 +49,7 @@
         "analyzer": "standard"
       },
       "answer_count": {
-        "type": "text",
-        "analyzer": "standard"
+        "type": "short"
       }
     }
   }
