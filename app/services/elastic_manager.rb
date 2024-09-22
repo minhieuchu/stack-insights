@@ -69,7 +69,7 @@ class ElasticManager
     end
   end
 
-  def query(keywords)
+  def search_questions(keywords)
     response = ElasticClient.search(
       index: POST_INDEX,
       body: {
@@ -80,6 +80,11 @@ class ElasticManager
               { match: { body: keywords } },
               { match: { tags: keywords } },
             ],
+            must: {
+              term: {
+                post_type_id: "1",
+              },
+            },
             minimum_should_match: 1,
           },
         },

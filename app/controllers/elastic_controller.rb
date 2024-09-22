@@ -1,6 +1,6 @@
 class ElasticController < ApplicationController
-  def index
-    response = ElasticManager.instance.query(params[:q])
+  def search_questions
+    response = ElasticManager.instance.search_questions(params[:q])
     render json: response, status: :ok
   end
 end
