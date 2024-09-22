@@ -71,7 +71,7 @@ class ElasticManager
 
   def query(keywords)
     response = ElasticClient.search(
-      index: [POST_INDEX, COMMENT_INDEX, BADGE_INDEX, TAG_INDEX],
+      index: POST_INDEX,
       body: {
         query: {
           bool: {
@@ -79,10 +79,6 @@ class ElasticManager
               { match: { title: keywords } },
               { match: { body: keywords } },
               { match: { tags: keywords } },
-              { match: { text: keywords } },
-              { match: { name: keywords } },
-              { match: { class: keywords } },
-              { match: { tag_name: keywords } },
             ],
             minimum_should_match: 1,
           },
