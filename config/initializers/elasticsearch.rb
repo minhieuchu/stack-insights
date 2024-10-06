@@ -1,7 +1,7 @@
 require "elasticsearch"
 require "elasticsearch/helpers/bulk_helper"
 
-POST_INDEX = "posts"
+QUESTION_INDEX = "questions"
 USER_INDEX = "users"
 COMMENT_INDEX = "comments"
 BADGE_INDEX = "badges"
@@ -13,6 +13,7 @@ POST_ATTRIBUTES = [
   "Tags",
   "Body",
   "Score",
+  "ParentId",
   "ViewCount",
   "PostTypeId",
   "OwnerUserId",
@@ -62,7 +63,7 @@ TAG_ATTRIBUTES = [
   "IsModeratorOnly",
   "IsRequired",
 ]
-BULK_SIZE = 9 * 10 ** 6  # 9MB
+MAX_BULK_SIZE = 500  # 9 * 10 ** 6  # 9MB
 
 ElasticClient = Elasticsearch::Client.new(
   url: "http://localhost:9200/", # Todo: Set env variable
@@ -71,5 +72,5 @@ ElasticClient = Elasticsearch::Client.new(
 
 Rails.application.config.after_initialize do
   ElasticManager.instance.create_indices
-  ElasticBulkHelper = Elasticsearch::Helpers::BulkHelper.new(ElasticClient, POST_INDEX)
+  ElasticBulkHelper = Elasticsearch::Helpers::BulkHelper.new(ElasticClient, QUESTION_INDEX)
 end

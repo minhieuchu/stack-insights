@@ -50,6 +50,43 @@
       },
       "answer_count": {
         "type": "short"
+      },
+      "answers": {
+        "type": "nested",
+        "properties": {
+          "id": {
+            "type": "keyword"
+          },
+          "post_type_id": {
+            "type": "keyword"
+          },
+          "creation_date": {
+            "type": "date"
+          },
+          "score": {
+            "type": "short"
+          },
+          "view_count": {
+            "type": "integer"
+          },
+          "body": {
+            "type": "text",
+            "analyzer": "standard"
+          },
+          "owner_user_id": {
+            "type": "keyword"
+          },
+          "owner_display_name": {
+            "type": "text",
+            "analyzer": "standard"
+          },
+          "last_edit_date": {
+            "type": "date"
+          },
+          "last_activity_date": {
+            "type": "date"
+          }
+        }
       }
     }
   }
