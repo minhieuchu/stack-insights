@@ -1,6 +1,6 @@
 require "singleton"
 
-IndexSettings = Struct.new(:index_name, :index_attributes, :mapping_file, :data_file)
+IndexSettings = Struct.new(:index_name, :mapping_file)
 
 class ElasticManager
   include Singleton
@@ -8,11 +8,11 @@ class ElasticManager
 
   def initialize
     @index_settings = [
-      IndexSettings.new(QUESTION_INDEX, POST_ATTRIBUTES, "question.json", "Posts.xml"),
-      IndexSettings.new(USER_INDEX, USER_ATTRIBUTES, "user.json", "Users.xml"),
-      IndexSettings.new(COMMENT_INDEX, COMMENT_ATTRIBUTES, "comment.json", "Comments.xml"),
-      IndexSettings.new(BADGE_INDEX, BADGE_ATTRIBUTES, "badge.json", "Badges.xml"),
-      IndexSettings.new(TAG_INDEX, TAG_ATTRIBUTES, "tag.json", "Tags.xml"),
+      IndexSettings.new(QUESTION_INDEX, "question.json"),
+      IndexSettings.new(COMMENT_INDEX, "comment.json"),
+      IndexSettings.new(BADGE_INDEX, "badge.json"),
+      IndexSettings.new(USER_INDEX, "user.json"),
+      IndexSettings.new(TAG_INDEX, "tag.json"),
     ]
   end
 
@@ -33,46 +33,14 @@ class ElasticManager
     create_indices
   end
 
-  def process_attr_value(attr_value)
+  def refined_attr_value(attr_value)
     if ["True", "False"].include?(attr_value)
       return camel_to_snake(attr_value)
     end
     attr_value
   end
 
-  def process_xml_files
-    @index_settings.each do |index_setting|
-      ElasticBulkHelper.index = index_setting.index_name
-      data_file_path = File.join(File.dirname(__FILE__), "/elastic_documents/#{index_setting.data_file}")
-      document_bulk = []
-      document_bulk_size = 0
-
-      File.foreach(data_file_path) do |line|
-        xml_object = Nokogiri::XML(line)
-        row_element = xml_object.at_xpath("//row")
-        unless row_element.nil?
-          document_hash = index_setting.index_attributes.each_with_object({}) do |attr_name, document|
-            unless row_element.attr(attr_name).nil?
-              document[camel_to_snake(attr_name)] = process_attr_value(row_element.attr(attr_name))
-            end
-          end
-          document_as_json = document_hash.to_json
-          if document_bulk_size + document_as_json.bytesize <= MAX_BULK_SIZE
-            document_bulk << document_hash
-            document_bulk_size += document_as_json.bytesize
-          else
-            ElasticBulkHelper.ingest(document_bulk)
-            document_bulk = [document_hash]
-            document_bulk_size = document_as_json.bytesize
-          end
-        end
-      end
-      ElasticBulkHelper.ingest(document_bulk)
-    end
-  end
-
   def process_posts_xml
-    ElasticBulkHelper.index = QUESTION_INDEX
     post_file_path = File.join(File.dirname(__FILE__), "/elastic_documents/Posts.xml")
     question_bulk = []
     question_bulk_size = 0
@@ -83,7 +51,7 @@ class ElasticManager
       unless row_element.nil?
         post = POST_ATTRIBUTES.each_with_object({}) do |attr_name, document|
           unless row_element.attr(attr_name).nil?
-            document[camel_to_snake(attr_name)] = process_attr_value(row_element.attr(attr_name))
+            document[camel_to_snake(attr_name)] = refined_attr_value(row_element.attr(attr_name))
           end
         end
 
@@ -108,6 +76,7 @@ class ElasticManager
                   },
                 },
               },
+              refresh: "true",
             )
           end
         end
@@ -131,7 +100,16 @@ class ElasticManager
     end
 
     if question_bulk.length > 0
-      ElasticBulkHelper.ingest(question_bulk)
+      question_bulk_body = question_bulk.map do |question|
+        [
+          { index: { _index: QUESTION_INDEX } },
+          question,
+        ]
+      end.flatten
+      ElasticClient.bulk(
+        body: question_bulk_body,
+        refresh: "true",
+      )
     end
   end
 

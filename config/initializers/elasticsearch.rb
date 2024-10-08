@@ -72,5 +72,4 @@ ElasticClient = Elasticsearch::Client.new(
 
 Rails.application.config.after_initialize do
   ElasticManager.instance.create_indices
-  ElasticBulkHelper = Elasticsearch::Helpers::BulkHelper.new(ElasticClient, QUESTION_INDEX)
 end
