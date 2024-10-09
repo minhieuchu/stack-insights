@@ -40,10 +40,26 @@ class ElasticManager
     attr_value
   end
 
+  def get_es_question_id_from_redis(question_id)
+    resp = ElasticClient.search(
+      index: QUESTION_INDEX,
+      body: {
+        query: {
+          match: {
+            id: question_id,
+          },
+        },
+      },
+    )
+    resp.dig("hits", "hits")[0].dig("_id")
+  end
+
   def process_posts_xml
     post_file_path = File.join(File.dirname(__FILE__), "/elastic_documents/Posts.xml")
     question_bulk = []
     question_bulk_size = 0
+    answer_bulk_update_body = []
+    answer_bulk_update_body_size = 0
 
     File.foreach(post_file_path) do |line|
       xml_object = Nokogiri::XML(line)
@@ -65,10 +81,10 @@ class ElasticManager
             related_question["answers"] << post
             question_bulk_size += post.to_json.bytesize
           else
-            ElasticClient.update_by_query(
-              index: QUESTION_INDEX,
-              body: {
-                query: { match: { id: post["parent_id"] } },
+            es_question_id = get_es_question_id_from_redis(post["parent_id"])
+            update_params = [
+              { update: { _id: es_question_id, _index: QUESTION_INDEX } },
+              {
                 script: {
                   source: "ctx._source.answers.add(params.answer)",
                   params: {
@@ -76,8 +92,9 @@ class ElasticManager
                   },
                 },
               },
-              refresh: "true",
-            )
+            ]
+            answer_bulk_update_body.push(*update_params)
+            answer_bulk_update_body_size += update_params.to_json.bytesize
           end
         end
 
@@ -96,6 +113,15 @@ class ElasticManager
           question_bulk = []
           question_bulk_size = 0
         end
+
+        if answer_bulk_update_body_size >= MAX_BULK_SIZE
+          ElasticClient.bulk(
+            body: answer_bulk_update_body,
+            refresh: "true",
+          )
+          answer_bulk_update_body = []
+          answer_bulk_update_body_size = 0
+        end
       end
     end
 
@@ -108,6 +134,13 @@ class ElasticManager
       end.flatten
       ElasticClient.bulk(
         body: question_bulk_body,
+        refresh: "true",
+      )
+    end
+
+    if answer_bulk_update_body.length > 0
+      ElasticClient.bulk(
+        body: answer_bulk_update_body,
         refresh: "true",
       )
     end
@@ -134,6 +167,8 @@ class ElasticManager
         },
       },
     )
-    results = response.dig("hits", "hits").map { |document| document.dig("_source") }
+    response.dig("hits", "hits").map { |document| document.dig("_source") }
   end
+
+  private :get_es_question_id_from_redis
 end
