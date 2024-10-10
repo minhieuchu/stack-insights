@@ -1,6 +1,6 @@
 require "singleton"
 
-IndexSettings = Struct.new(:index_name, :mapping_file)
+IndexSettings = Struct.new(:index_name, :mapping_file, :document_attributes, :document_file)
 
 class ElasticManager
   include Singleton
@@ -8,11 +8,10 @@ class ElasticManager
 
   def initialize
     @index_settings = [
-      IndexSettings.new(QUESTION_INDEX, "question.json"),
-      IndexSettings.new(COMMENT_INDEX, "comment.json"),
-      IndexSettings.new(BADGE_INDEX, "badge.json"),
-      IndexSettings.new(USER_INDEX, "user.json"),
-      IndexSettings.new(TAG_INDEX, "tag.json"),
+      IndexSettings.new(QUESTION_INDEX, "question.json", POST_ATTRIBUTES, "Posts.xml"),
+      IndexSettings.new(COMMENT_INDEX, "comment.json", COMMENT_ATTRIBUTES, "Comments.xml"),
+      IndexSettings.new(USER_INDEX, "user.json", USER_ATTRIBUTES, "Users.xml"),
+      IndexSettings.new(TAG_INDEX, "tag.json", TAG_ATTRIBUTES, "Tags.xml"),
     ]
   end
 
@@ -33,14 +32,39 @@ class ElasticManager
     create_indices
   end
 
-  def refined_attr_value(attr_value)
-    if ["True", "False"].include?(attr_value)
-      return camel_to_snake(attr_value)
+  def index_documents
+    @index_settings.each do |index_setting|
+      if index_setting.index_name == QUESTION_INDEX
+        index_questions
+      else
+        document_file_path = File.join(File.dirname(__FILE__), "/elastic_documents/#{index_setting.document_file}")
+        document_bulk = []
+        document_bulk_size = 0
+
+        File.foreach(document_file_path) do |line|
+          xml_object = Nokogiri::XML(line)
+          row_element = xml_object.at_xpath("//row")
+          unless row_element.nil?
+            document_hash = index_setting.document_attributes.each_with_object({}) do |attr_name, document|
+              unless row_element.attr(attr_name).nil?
+                document[camel_to_snake(attr_name)] = refined_attr_value(row_element.attr(attr_name))
+              end
+            end
+            document_bulk << document_hash
+            document_bulk_size += document_hash.to_json.bytesize
+
+            if document_bulk_size >= MAX_BULK_SIZE
+              bulk_index(index_setting.index_name, document_bulk)
+              document_bulk = []
+              document_bulk_size = 0
+            end
+          end
+        end
+      end
     end
-    attr_value
   end
 
-  def process_posts_xml
+  def index_questions
     post_file_path = File.join(File.dirname(__FILE__), "/elastic_documents/Posts.xml")
     question_bulk = []
     question_bulk_size = 0
@@ -62,7 +86,7 @@ class ElasticManager
           question_bulk << post
           question_bulk_size += post.to_json.bytesize
         elsif post["post_type_id"] == "2"
-          related_question = question_bulk.find { |question| question["id"] == post["parent_id"] }
+          related_question = question_bulk.find { |document| document["id"] == post["parent_id"] }
           unless related_question.nil?
             related_question["answers"] << post
             question_bulk_size += post.to_json.bytesize
@@ -84,17 +108,7 @@ class ElasticManager
         end
 
         if question_bulk_size >= MAX_BULK_SIZE
-          question_bulk_body = question_bulk.map do |question|
-            [
-              { index: { _index: QUESTION_INDEX, _id: question["id"] } },
-              question,
-            ]
-          end.flatten
-
-          ElasticClient.bulk(
-            body: question_bulk_body,
-            refresh: "true",
-          )
+          bulk_index(QUESTION_INDEX, question_bulk)
           question_bulk = []
           question_bulk_size = 0
         end
@@ -111,16 +125,7 @@ class ElasticManager
     end
 
     if question_bulk.length > 0
-      question_bulk_body = question_bulk.map do |question|
-        [
-          { index: { _index: QUESTION_INDEX, _id: question["id"] } },
-          question,
-        ]
-      end.flatten
-      ElasticClient.bulk(
-        body: question_bulk_body,
-        refresh: "true",
-      )
+      bulk_index(QUESTION_INDEX, question_bulk)
     end
 
     if answer_bulk_update_body.length > 0
@@ -141,17 +146,45 @@ class ElasticManager
               { match: { title: keywords } },
               { match: { body: keywords } },
               { match: { tags: keywords } },
-            ],
-            must: {
-              term: {
-                post_type_id: "1",
+              {
+                nested: {
+                  path: "answers",
+                  query: {
+                    match: {
+                      "answers.body": keywords,
+                    },
+                  },
+                },
               },
-            },
+            ],
             minimum_should_match: 1,
           },
         },
       },
     )
     response.dig("hits", "hits").map { |document| document.dig("_source") }
+  end
+
+  private
+
+  def refined_attr_value(attr_value)
+    if ["True", "False"].include?(attr_value)
+      return camel_to_snake(attr_value)
+    end
+    attr_value
+  end
+
+  def bulk_index(index_name, document_bulk)
+    bulk_request_body = document_bulk.map do |document|
+      [
+        { index: { _index: index_name, _id: document["id"] } },
+        document,
+      ]
+    end.flatten
+
+    ElasticClient.bulk(
+      body: bulk_request_body,
+      refresh: "true",
+    )
   end
 end

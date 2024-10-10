@@ -4,7 +4,6 @@ require "elasticsearch/helpers/bulk_helper"
 QUESTION_INDEX = "questions"
 USER_INDEX = "users"
 COMMENT_INDEX = "comments"
-BADGE_INDEX = "badges"
 TAG_INDEX = "tags"
 
 POST_ATTRIBUTES = [
@@ -45,14 +44,6 @@ COMMENT_ATTRIBUTES = [
   "UserDisplayName",
   "UserId",
   "ContentLicense",
-]
-BADGE_ATTRIBUTES = [
-  "Id",
-  "UserId",
-  "Name",
-  "Date",
-  "Class",
-  "TagBased",
 ]
 TAG_ATTRIBUTES = [
   "Id",
