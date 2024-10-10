@@ -40,20 +40,6 @@ class ElasticManager
     attr_value
   end
 
-  def get_es_question_id_from_redis(question_id)
-    resp = ElasticClient.search(
-      index: QUESTION_INDEX,
-      body: {
-        query: {
-          match: {
-            id: question_id,
-          },
-        },
-      },
-    )
-    resp.dig("hits", "hits")[0].dig("_id")
-  end
-
   def process_posts_xml
     post_file_path = File.join(File.dirname(__FILE__), "/elastic_documents/Posts.xml")
     question_bulk = []
@@ -81,9 +67,8 @@ class ElasticManager
             related_question["answers"] << post
             question_bulk_size += post.to_json.bytesize
           else
-            es_question_id = get_es_question_id_from_redis(post["parent_id"])
             update_params = [
-              { update: { _id: es_question_id, _index: QUESTION_INDEX } },
+              { update: { _id: post["parent_id"], _index: QUESTION_INDEX } },
               {
                 script: {
                   source: "ctx._source.answers.add(params.answer)",
@@ -101,7 +86,7 @@ class ElasticManager
         if question_bulk_size >= MAX_BULK_SIZE
           question_bulk_body = question_bulk.map do |question|
             [
-              { index: { _index: QUESTION_INDEX } },
+              { index: { _index: QUESTION_INDEX, _id: question["id"] } },
               question,
             ]
           end.flatten
@@ -128,7 +113,7 @@ class ElasticManager
     if question_bulk.length > 0
       question_bulk_body = question_bulk.map do |question|
         [
-          { index: { _index: QUESTION_INDEX } },
+          { index: { _index: QUESTION_INDEX, _id: question["id"] } },
           question,
         ]
       end.flatten
@@ -169,6 +154,4 @@ class ElasticManager
     )
     response.dig("hits", "hits").map { |document| document.dig("_source") }
   end
-
-  private :get_es_question_id_from_redis
 end
