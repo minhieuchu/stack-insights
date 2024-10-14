@@ -24,11 +24,8 @@ POST_ATTRIBUTES = [
 USER_ATTRIBUTES = [
   "Id",
   "Reputation",
-  "CreationDate",
   "DisplayName",
-  "WebsiteUrl",
   "Location",
-  "AboutMe",
   "Views",
   "UpVotes",
   "DownVotes",
@@ -54,7 +51,8 @@ TAG_ATTRIBUTES = [
   "IsModeratorOnly",
   "IsRequired",
 ]
-MAX_BULK_SIZE = 500  # 9 * 10 ** 6  # 9MB
+MAX_BULK_SIZE = 9 * 10 ** 6  # 9MB
+RECORD_SIZE = 1000
 
 ElasticClient = Elasticsearch::Client.new(
   url: "http://localhost:9200/", # Todo: Set env variable

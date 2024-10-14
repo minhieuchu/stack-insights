@@ -60,6 +60,9 @@ class ElasticManager
             end
           end
         end
+        if document_bulk.length > 0
+          resp = bulk_index(index_setting.index_name, document_bulk)
+        end
       end
     end
   end
@@ -137,9 +140,13 @@ class ElasticManager
   end
 
   def search_questions(keywords)
-    response = ElasticClient.search(
+    question_response = ElasticClient.search(
       index: QUESTION_INDEX,
+      size: RECORD_SIZE,
       body: {
+        _source: {
+          exclude: ["answers"],
+        },
         query: {
           bool: {
             should: [
@@ -162,7 +169,24 @@ class ElasticManager
         },
       },
     )
-    response.dig("hits", "hits").map { |document| document.dig("_source") }
+    questions = question_response.dig("hits", "hits").map { |document| document.dig("_source") }
+    related_user_ids = questions.map { |question| question["owner_user_id"] }.reject { |user_id| user_id.nil? }
+    users_response = ElasticClient.search(
+      index: USER_INDEX,
+      size: RECORD_SIZE,
+      body: {
+        query: {
+          ids: {
+            values: related_user_ids,
+          },
+        },
+      },
+    )
+    users = users_response.dig("hits", "hits").map { |document| document.dig("_source") }
+
+    questions.each do |question|
+      question["owner_user"] = users.find { |user| user["id"] == question["owner_user_id"] }
+    end
   end
 
   private

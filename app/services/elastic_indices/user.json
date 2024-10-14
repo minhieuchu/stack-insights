@@ -14,21 +14,11 @@
       "reputation": {
         "type": "integer"
       },
-      "creation_date": {
-        "type": "date"
-      },
       "display_name": {
         "type": "text",
         "analyzer": "standard"
       },
-      "website_url": {
-        "type": "keyword"
-      },
       "location": {
-        "type": "text",
-        "analyzer": "standard"
-      },
-      "about_me": {
         "type": "text",
         "analyzer": "standard"
       },
